@@ -20,6 +20,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   sortDirection: 'asc' | 'desc' = 'desc';
   
   private documentUploadedSubscription?: Subscription;
+  private downloadInProgress = false;
 
   constructor(private documentService: DocumentService) { }
 
@@ -67,11 +68,71 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   }
 
   downloadDocument(document: Document): void {
+    if (this.downloadInProgress) {
+      return; // Prevent multiple simultaneous downloads
+    }
+    
     try {
-      this.documentService.downloadAndSaveFile(document.key, document.fileName);
+      this.downloadInProgress = true;
+      
+      // Use the improved download method
+      this.documentService.downloadFile(document.key, document.fileName)
+        .subscribe({
+          next: (data: ArrayBuffer) => {
+            // Determine content type based on file extension
+            const fileExtension = document.fileName.split('.').pop()?.toLowerCase();
+            let contentType = 'application/octet-stream'; // Default
+            
+            switch (fileExtension) {
+              case 'pdf':
+                contentType = 'application/pdf';
+                break;
+              case 'docx':
+                contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                break;
+              case 'xlsx':
+                contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                break;
+              case 'txt':
+                contentType = 'text/plain';
+                break;
+              case 'jpg':
+              case 'jpeg':
+                contentType = 'image/jpeg';
+                break;
+              case 'png':
+                contentType = 'image/png';
+                break;
+            }
+            
+            // Create a blob with the correct content type
+            const blob = new Blob([data], { type: contentType });
+            
+            // Create a blob URL and trigger download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = document.fileName;
+            
+            // Append to body, trigger click, and clean up
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Release the object URL
+            window.URL.revokeObjectURL(url);
+            this.downloadInProgress = false;
+          },
+          error: (error) => {
+            console.error('Error downloading document:', error);
+            alert('Failed to download the document. Please try again later.');
+            this.downloadInProgress = false;
+          }
+        });
     } catch (err) {
-      console.error('Error downloading document:', err);
+      console.error('Exception during download:', err);
       alert('Failed to download the document. Please try again later.');
+      this.downloadInProgress = false;
     }
   }
 

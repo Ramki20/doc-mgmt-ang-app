@@ -32,6 +32,7 @@ export class DocumentUploadComponent {
       if (fileExtension && this.allowedFileTypes.includes(`.${fileExtension}`)) {
         this.selectedFile = file;
         this.errorMessage = '';
+        console.log('File selected:', file.name, file.type, file.size);
       } else {
         this.errorMessage = `File type not allowed. Supported types: ${this.allowedFileTypes.join(', ')}`;
         this.selectedFile = null;
@@ -49,6 +50,8 @@ export class DocumentUploadComponent {
     this.uploadProgress = 0;
     this.errorMessage = '';
     this.successMessage = '';
+    
+    console.log('Starting file upload:', this.selectedFile.name);
 
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -66,27 +69,31 @@ export class DocumentUploadComponent {
           clearInterval(progressInterval);
           setTimeout(() => {
             this.isUploading = false;
-            this.uploadProgress = 0;
-            this.selectedFile = null;
-            
-            // Reset the file input
-            const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-            if (fileInput) {
-              fileInput.value = '';
+            if (!this.errorMessage) {
+              this.uploadProgress = 0;
+              this.selectedFile = null;
+              
+              // Reset the file input
+              const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+              if (fileInput) {
+                fileInput.value = '';
+              }
             }
           }, 1500);
         })
       )
       .subscribe({
         next: (response) => {
+          console.log('Upload success response:', response);
           this.uploadProgress = 100;
           this.successMessage = `${this.selectedFile!.name} uploaded successfully!`;
           // Emit an event to refresh the document list
           window.dispatchEvent(new CustomEvent('document-uploaded'));
         },
         error: (error) => {
-          this.errorMessage = `Error uploading file: ${error.message || 'Unknown error'}`;
           console.error('Upload error:', error);
+          this.uploadProgress = 0;
+          this.errorMessage = `Error uploading file: ${error.message || 'Unknown error'}`;
         }
       });
   }
