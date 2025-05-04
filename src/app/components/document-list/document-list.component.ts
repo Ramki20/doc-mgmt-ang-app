@@ -97,7 +97,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
                 break;
               case 'jpg':
               case 'jpeg':
-                contentType = 'image/jpeg';
+                contentType = 'image/jpg';
                 break;
               case 'png':
                 contentType = 'image/png';
