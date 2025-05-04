@@ -15,17 +15,20 @@ export class DocumentService {
 
   /**
    * Upload a file directly to the Lambda function
-   * Simplified to focus on just uploading the file without extra parameters
    */
   uploadFile(file: File): Observable<any> {
-    // Create form data with just the file
+    // Create form data to send the file
     const formData = new FormData();
     formData.append('file', file);
     
     // Set up query parameters with just the action
+    // The file name and type are extracted by busboy from the form data
     let params = new HttpParams().set('action', 'uploadFile');
     
-    // Let browser set the content type automatically with boundaries
+    // Let the browser set the content type header automatically
+    console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    
+    // Send the file to Lambda
     return this.http.post<any>(`${this.apiUrl}`, formData, {
       params,
       responseType: 'json' as 'json'
@@ -43,7 +46,6 @@ export class DocumentService {
 
   /**
    * Download a file directly from Lambda
-   * This triggers a file download
    */
   downloadFile(key: string, fileName: string): Observable<ArrayBuffer> {
     // Set up query parameters
@@ -70,7 +72,7 @@ export class DocumentService {
         break;
       case 'jpg':
       case 'jpeg':
-        contentType = 'image/jpeg';
+        contentType = 'image/jpg';
         break;
       case 'png':
         contentType = 'image/png';
