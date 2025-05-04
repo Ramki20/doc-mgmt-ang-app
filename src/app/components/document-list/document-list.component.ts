@@ -2,7 +2,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DocumentService } from '../../services/document.service';
-import { Document } from '../../models/document.model';
+import { DocumentItem } from '../../models/document-item.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./document-list.component.scss']
 })
 export class DocumentListComponent implements OnInit, OnDestroy {
-  documents: Document[] = [];
+  documents: DocumentItem[] = [];
   isLoading = false;
   error = '';
   sortField = 'lastModified';
@@ -51,7 +51,6 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     this.documentService.listDocuments()
       .subscribe({
         next: (response) => {
-          console.log('Documents loaded:', response.documents);  
           this.documents = response.documents.map(doc => ({
             ...doc,
             lastModified: new Date(doc.lastModified)
@@ -67,7 +66,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
       });
   }
 
-  downloadDocument(document: Document): void {
+  downloadDocument(doc: DocumentItem): void {
     if (this.downloadInProgress) {
       return; // Prevent multiple simultaneous downloads
     }
@@ -76,11 +75,11 @@ export class DocumentListComponent implements OnInit, OnDestroy {
       this.downloadInProgress = true;
       
       // Use the improved download method
-      this.documentService.downloadFile(document.key, document.fileName)
+      this.documentService.downloadFile(doc.key, doc.fileName)
         .subscribe({
           next: (data: ArrayBuffer) => {
             // Determine content type based on file extension
-            const fileExtension = document.fileName.split('.').pop()?.toLowerCase();
+            const fileExtension = doc.fileName.split('.').pop()?.toLowerCase();
             let contentType = 'application/octet-stream'; // Default
             
             switch (fileExtension) {
@@ -108,16 +107,16 @@ export class DocumentListComponent implements OnInit, OnDestroy {
             // Create a blob with the correct content type
             const blob = new Blob([data], { type: contentType });
             
-            // Create a blob URL and trigger download
+            // Create a blob URL and trigger download - use window.document to avoid conflicts
             const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
+            const link = window.document.createElement('a');
             link.href = url;
-            link.download = document.fileName;
+            link.download = doc.fileName;
             
             // Append to body, trigger click, and clean up
-            document.body.appendChild(link);
+            window.document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
+            window.document.body.removeChild(link);
             
             // Release the object URL
             window.URL.revokeObjectURL(url);

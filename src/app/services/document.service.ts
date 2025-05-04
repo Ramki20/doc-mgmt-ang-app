@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Document } from '../models/document.model';
+import { DocumentItem } from '../models/document-item.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -15,25 +15,19 @@ export class DocumentService {
 
   /**
    * Upload a file directly to the Lambda function
+   * Simplified to focus on just uploading the file without extra parameters
    */
   uploadFile(file: File): Observable<any> {
-    // Create form data to send the file
+    // Create form data with just the file
     const formData = new FormData();
     formData.append('file', file);
     
-    // Set up query parameters with file information
-    let params = new HttpParams()
-      .set('action', 'uploadFile')
-      .set('fileName', file.name)
-      .set('contentType', file.type);
+    // Set up query parameters with just the action
+    let params = new HttpParams().set('action', 'uploadFile');
     
-    // Set up headers WITHOUT content-type (let browser set it for multipart/form-data)
-    const headers = new HttpHeaders();
-    
-    // Send the file directly to Lambda
+    // Let browser set the content type automatically with boundaries
     return this.http.post<any>(`${this.apiUrl}`, formData, {
       params,
-      headers,
       responseType: 'json' as 'json'
     });
   }
@@ -41,8 +35,8 @@ export class DocumentService {
   /**
    * List all documents
    */
-  listDocuments(): Observable<{ documents: Document[] }> {
-    return this.http.get<{ documents: Document[] }>(`${this.apiUrl}`, {
+  listDocuments(): Observable<{ documents: DocumentItem[] }> {
+    return this.http.get<{ documents: DocumentItem[] }>(`${this.apiUrl}`, {
       params: { action: 'listDocuments' }
     });
   }
@@ -131,14 +125,14 @@ export class DocumentService {
         
         // Create a blob URL and trigger download
         const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = window.document.createElement('a');
         link.href = url;
         link.download = fileName;
         
         // Append to body, trigger click, and clean up
-        document.body.appendChild(link);
+        window.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        window.document.body.removeChild(link);
         
         // Release the object URL
         window.URL.revokeObjectURL(url);
