@@ -2,6 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { DocumentItem } from '../models/document-item.model';
 import { environment } from '../../environments/environment';
 
@@ -57,92 +58,57 @@ export class DocumentService {
     const fileExtension = fileName.split('.').pop()?.toLowerCase();
     let contentType = 'application/octet-stream'; // Default
     
-    switch (fileExtension) {
-      case 'pdf':
-        contentType = 'application/pdf';
-        break;
-      case 'docx':
-        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        break;
-      case 'xlsx':
-        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        break;
-      case 'txt':
-        contentType = 'text/plain';
-        break;
-      case 'jpg':
-      case 'jpeg':
-        contentType = 'image/jpg';
-        break;
-      case 'png':
-        contentType = 'image/png';
-        break;
-    }
+    // Check if this is a text file
+    const isTextFile = fileExtension === 'txt';
     
-    // Set Accept header to match expected content type
-    const headers = new HttpHeaders().set('Accept', contentType);
-    
-    // Request the file as arraybuffer
-    return this.http.get(`${this.apiUrl}`, {
-      params,
-      headers,
-      responseType: 'arraybuffer'
-    });
-  }
-
-  /**
-   * Handle file download and trigger browser save dialog
-   */
-  downloadAndSaveFile(key: string, fileName: string): void {
-    this.downloadFile(key, fileName).subscribe({
-      next: (data: ArrayBuffer) => {
-        // Determine content type based on file extension
-        const fileExtension = fileName.split('.').pop()?.toLowerCase();
-        let contentType = 'application/octet-stream'; // Default
-        
-        switch (fileExtension) {
-          case 'pdf':
-            contentType = 'application/pdf';
-            break;
-          case 'docx':
-            contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            break;
-          case 'xlsx':
-            contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            break;
-          case 'txt':
-            contentType = 'text/plain';
-            break;
-          case 'jpg':
-          case 'jpeg':
-            contentType = 'image/jpeg';
-            break;
-          case 'png':
-            contentType = 'image/png';
-            break;
-        }
-        
-        // Create a blob with the correct content type
-        const blob = new Blob([data], { type: contentType });
-        
-        // Create a blob URL and trigger download
-        const url = window.URL.createObjectURL(blob);
-        const link = window.document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        
-        // Append to body, trigger click, and clean up
-        window.document.body.appendChild(link);
-        link.click();
-        window.document.body.removeChild(link);
-        
-        // Release the object URL
-        window.URL.revokeObjectURL(url);
-      },
-      error: (error) => {
-        console.error('Error downloading file:', error);
-        alert('Failed to download the document. Please try again later.');
+    // For text files, we'll handle the response differently
+    if (isTextFile) {
+      // For text files, we're expecting a JSON response
+      return this.http.get(`${this.apiUrl}`, {
+        params,
+        responseType: 'json' as 'json'
+      }).pipe(
+        map((response: any) => {
+          // Convert the base64 encoded content back to binary
+          const binaryString = window.atob(response.fileContent);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          return bytes.buffer;
+        })
+      );
+    } else {
+      // For other file types, determine the correct content type
+      switch (fileExtension) {
+        case 'pdf':
+          contentType = 'application/pdf';
+          break;
+        case 'docx':
+          contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          break;
+        case 'xlsx':
+          contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          break;
+        case 'jpg':
+        case 'jpeg':
+          contentType = 'image/jpg';
+          break;
+        case 'png':
+          contentType = 'image/png';
+          break;
       }
-    });
-  }
+      
+      // Set Accept header to match expected content type
+      const headers = new HttpHeaders().set('Accept', contentType);
+      
+      // Request the file as arraybuffer
+      return this.http.get(`${this.apiUrl}`, {
+        params,
+        headers,
+        responseType: 'arraybuffer'
+      });
+    }
+  }  
 }
