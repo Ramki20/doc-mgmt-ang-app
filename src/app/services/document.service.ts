@@ -21,6 +21,10 @@ export class DocumentService {
     // Create form data to send the file
     const formData = new FormData();
     formData.append('file', file);
+
+    // Add text fields
+    formData.append('documentValueCode', 'DD');
+    formData.append('documentValueTypeCode', 'DDD');
     
     // Set up query parameters with just the action
     // The file name and type are extracted by busboy from the form data
